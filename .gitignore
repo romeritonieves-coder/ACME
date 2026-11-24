@@ -3,3 +3,6 @@
 .vscode/
 .idea/
 *.iml
+*.log
+mvn.cmd
+acme/mvn.cmd
