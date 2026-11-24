@@ -2,8 +2,6 @@ package com.acme.sica.controller;
 
 import com.acme.sica.dto.LoginRequest;
 import com.acme.sica.dto.LoginResponse;
-import com.acme.sica.model.Usuario;
-import com.acme.sica.repository.UsuarioRepository;
 import com.acme.sica.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -20,7 +18,6 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
-    private final UsuarioRepository usuarioRepository;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
