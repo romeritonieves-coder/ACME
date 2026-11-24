@@ -11,7 +11,6 @@ import com.acme.sica.repository.EmpresaRepository;
 import com.acme.sica.repository.UsuarioRepository;
 import com.acme.sica.repository.VisitaRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Component
 @RequiredArgsConstructor
-@Slf4j
 public class InvitadoNoAnunciadoStrategy implements AccesoStrategy {
 
     private final VisitaRepository visitaRepository;

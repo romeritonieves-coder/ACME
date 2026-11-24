@@ -32,7 +32,6 @@ public class AccesoService {
     private final VwPersonasActualmenteDentroRepository personasDentroRepository;
     private final VwSolicitudesPendientesRepository solicitudesPendientesRepository;
     private final AccesoSubject accesoSubject;
-    private final AuditoriaService auditoriaService;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 

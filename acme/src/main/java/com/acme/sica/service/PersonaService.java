@@ -11,7 +11,6 @@ import com.acme.sica.repository.PersonaEstadoAccesoRepository;
 import com.acme.sica.repository.PersonaRepository;
 import com.acme.sica.security.RequirePermiso;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,13 +20,11 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class PersonaService {
 
     private final PersonaRepository personaRepository;
     private final PersonaEstadoAccesoRepository estadoAccesoRepository;
     private final EmpresaRepository empresaRepository;
-    private final AuditoriaService auditoriaService;
 
     @Transactional(readOnly = true)
     public Optional<PersonaDto> buscarPorDocumento(String documento) {
