@@ -2,8 +2,6 @@ package com.acme.sica.repository;
 
 import com.acme.sica.dto.DashboardSnapshot;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 
@@ -38,7 +36,7 @@ public final class DashboardRepository extends JdbcRepositorySupport {
                 ? " AND (v.anfitrion_id = ? OR v.empresa_destino_id = ?)"
                 : "";
         Object[] parameters = companyScoped
-                ? new Object[]{userId, companyId, companyId}
+                ? new Object[]{userId, companyId}
                 : new Object[0];
         return queryOne("""
                 SELECT COUNT(*) AS total

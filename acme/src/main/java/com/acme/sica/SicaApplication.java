@@ -1,6 +1,7 @@
 package com.acme.sica;
 
 import com.acme.sica.config.SicaApplicationContext;
+import com.acme.sica.view.DesktopTheme;
 import com.acme.sica.view.LoginFrame;
 import com.formdev.flatlaf.FlatDarkLaf;
 
@@ -33,24 +34,24 @@ public final class SicaApplication {
     }
 
     private static void configureTheme() {
-        UIManager.put("Panel.background", new java.awt.Color(38, 40, 41));
-        UIManager.put("Viewport.background", new java.awt.Color(38, 40, 41));
-        UIManager.put("TabbedPane.background", new java.awt.Color(45, 48, 49));
-        UIManager.put("Table.background", new java.awt.Color(45, 48, 49));
-        UIManager.put("Table.alternateRowColor", new java.awt.Color(49, 52, 53));
-        UIManager.put("Table.foreground", new java.awt.Color(226, 228, 227));
-        UIManager.put("Table.selectionBackground", new java.awt.Color(82, 105, 88));
-        UIManager.put("Table.selectionForeground", new java.awt.Color(247, 248, 246));
-        UIManager.put("Component.focusColor", new java.awt.Color(126, 151, 132));
+        UIManager.put("Panel.background", DesktopTheme.BACKGROUND);
+        UIManager.put("Viewport.background", DesktopTheme.BACKGROUND);
+        UIManager.put("TabbedPane.background", DesktopTheme.PANEL);
+        UIManager.put("Table.background", DesktopTheme.PANEL);
+        UIManager.put("Table.alternateRowColor", DesktopTheme.PANEL_HOVER);
+        UIManager.put("Table.foreground", DesktopTheme.TEXT);
+        UIManager.put("Table.selectionBackground", DesktopTheme.PRIMARY.darker());
+        UIManager.put("Table.selectionForeground", DesktopTheme.TEXT);
+        UIManager.put("Component.focusColor", DesktopTheme.PRIMARY);
         UIManager.put("Button.arc", 10);
         UIManager.put("Component.arc", 8);
         UIManager.put("defaultFont", new java.awt.Font("SansSerif", java.awt.Font.PLAIN, 14));
-        UIManager.put("Label.foreground", new java.awt.Color(226, 228, 227));
-        UIManager.put("TextField.background", new java.awt.Color(52, 55, 56));
-        UIManager.put("TextField.foreground", new java.awt.Color(235, 236, 234));
-        UIManager.put("TextField.caretForeground", new java.awt.Color(235, 236, 234));
-        UIManager.put("PasswordField.background", new java.awt.Color(52, 55, 56));
-        UIManager.put("PasswordField.foreground", new java.awt.Color(235, 236, 234));
-        UIManager.put("PasswordField.caretForeground", new java.awt.Color(235, 236, 234));
+        UIManager.put("Label.foreground", DesktopTheme.TEXT);
+        UIManager.put("TextField.background", DesktopTheme.PANEL);
+        UIManager.put("TextField.foreground", DesktopTheme.TEXT);
+        UIManager.put("TextField.caretForeground", DesktopTheme.TEXT);
+        UIManager.put("PasswordField.background", DesktopTheme.PANEL);
+        UIManager.put("PasswordField.foreground", DesktopTheme.TEXT);
+        UIManager.put("PasswordField.caretForeground", DesktopTheme.TEXT);
     }
 }
