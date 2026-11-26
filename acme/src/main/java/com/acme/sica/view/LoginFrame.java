@@ -43,6 +43,9 @@ public final class LoginFrame extends JFrame {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosed(WindowEvent event) {
+                if (getContentPane() instanceof SvgBackgroundPanel background) {
+                    background.close();
+                }
                 if (!handedOff) {
                     context.close();
                 }
@@ -51,11 +54,12 @@ public final class LoginFrame extends JFrame {
     }
 
     private void buildUi() {
-        JPanel root = new JPanel(new BorderLayout());
+        SvgBackgroundPanel root = new SvgBackgroundPanel(new BorderLayout());
         root.setBorder(BorderFactory.createEmptyBorder(30, 48, 36, 48));
         root.add(DesktopTheme.logoBadge(340, 112), BorderLayout.NORTH);
 
         JPanel form = new JPanel(new GridBagLayout());
+        form.setOpaque(false);
         form.setBorder(BorderFactory.createEmptyBorder(26, 22, 8, 22));
         GridBagConstraints c = new GridBagConstraints();
         c.gridx = 0;
@@ -84,6 +88,7 @@ public final class LoginFrame extends JFrame {
         root.add(form, BorderLayout.CENTER);
 
         JLabel footer = new JLabel("Sistema Integrado de Control de Acceso");
+        footer.setOpaque(false);
         footer.setForeground(DesktopTheme.MUTED);
         footer.setHorizontalAlignment(JLabel.CENTER);
         root.add(footer, BorderLayout.SOUTH);

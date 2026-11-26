@@ -14,8 +14,6 @@ import javax.swing.WindowConstants;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Dimension;
-import java.awt.GradientPaint;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.WindowAdapter;
@@ -47,6 +45,7 @@ public final class MainFrame extends JFrame {
             @Override
             public void windowClosed(WindowEvent event) {
                 stopPanels();
+                rootBackground().close();
                 if (loggingOut) {
                     new LoginFrame(context).setVisible(true);
                 } else {
@@ -76,7 +75,7 @@ public final class MainFrame extends JFrame {
     }
 
     private void buildNavigation() {
-        JPanel root = new CommandCenterPanel();
+        SvgBackgroundPanel root = new SvgBackgroundPanel();
         root.add(buildSidebar(), BorderLayout.WEST);
         JPanel content = new JPanel(new BorderLayout());
         content.setOpaque(false);
@@ -240,33 +239,8 @@ public final class MainFrame extends JFrame {
                 .map(DesktopPanel.class::cast).forEach(DesktopPanel::close);
     }
 
-    private static final class CommandCenterPanel extends JPanel {
-        private CommandCenterPanel() {
-            super(new BorderLayout());
-            setOpaque(true);
-        }
-
-        @Override
-        protected void paintComponent(Graphics graphics) {
-            super.paintComponent(graphics);
-            Graphics2D g = (Graphics2D) graphics.create();
-            try {
-                g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                g.setPaint(new GradientPaint(0, 0, DesktopTheme.BACKGROUND,
-                        getWidth(), getHeight(), DesktopTheme.BACKGROUND_SECONDARY));
-                g.fillRect(0, 0, getWidth(), getHeight());
-                g.setColor(new java.awt.Color(47, 128, 237, 9));
-                for (int x = getWidth() - 300; x < getWidth(); x += 22) {
-                    g.drawLine(x, 0, x - 210, Math.min(290, getHeight()));
-                }
-                g.setColor(new java.awt.Color(56, 189, 248, 7));
-                for (int x = 0; x < Math.min(350, getWidth()); x += 24) {
-                    g.drawLine(x, getHeight(), x + 210, Math.max(0, getHeight() - 250));
-                }
-            } finally {
-                g.dispose();
-            }
-        }
+    private SvgBackgroundPanel rootBackground() {
+        return (SvgBackgroundPanel) getContentPane();
     }
 
     private static final class AvatarLabel extends JLabel {
