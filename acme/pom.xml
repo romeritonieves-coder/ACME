@@ -62,6 +62,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- JDBC connection pool for the desktop application -->
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
