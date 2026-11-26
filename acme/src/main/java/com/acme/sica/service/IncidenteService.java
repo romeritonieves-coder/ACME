@@ -1,109 +1,94 @@
 package com.acme.sica.service;
 
 import com.acme.sica.dto.IncidenteDto;
-import com.acme.sica.model.*;
+import com.acme.sica.model.Incidente;
+import com.acme.sica.model.PuntoAcceso;
+import com.acme.sica.model.Usuario;
+import com.acme.sica.model.Visita;
 import com.acme.sica.pattern.observer.AccesoEvento;
 import com.acme.sica.pattern.observer.AccesoSubject;
-import com.acme.sica.pattern.proxy.Auditable;
 import com.acme.sica.repository.IncidenteRepository;
 import com.acme.sica.repository.PuntoAccesoRepository;
 import com.acme.sica.repository.VisitaRepository;
-import com.acme.sica.security.RequirePermiso;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.stream.Collectors;
 
-@Service
-@RequiredArgsConstructor
-@Slf4j
 public class IncidenteService {
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final IncidenteRepository incidenteRepository;
     private final VisitaRepository visitaRepository;
     private final PuntoAccesoRepository puntoAccesoRepository;
     private final AccesoSubject accesoSubject;
+    private final AuditedOperationProxy operations;
 
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    public IncidenteService(IncidenteRepository incidenteRepository, VisitaRepository visitaRepository,
+                            PuntoAccesoRepository puntoAccesoRepository, AccesoSubject accesoSubject,
+                            AuditedOperationProxy operations) {
+        this.incidenteRepository = incidenteRepository;
+        this.visitaRepository = visitaRepository;
+        this.puntoAccesoRepository = puntoAccesoRepository;
+        this.accesoSubject = accesoSubject;
+        this.operations = operations;
+    }
 
-    @Transactional(readOnly = true)
-    @RequirePermiso("INCIDENTES_VER")
     public List<IncidenteDto> listarTodos() {
-        return incidenteRepository.findAllByOrderByFechaDesc().stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
+        return operations.execute("INCIDENTES_VER", "CONSULTAR_INCIDENTES", "incidentes", null,
+                () -> incidenteRepository.findAllByOrderByFechaDesc().stream().map(this::mapToDto).toList());
     }
 
-    @Transactional
-    @RequirePermiso("INCIDENTES_REGISTRAR")
-    @Auditable(accion = "REGISTRAR_INCIDENTE", tabla = "incidentes")
     public IncidenteDto registrarIncidente(IncidenteDto dto, Usuario usuarioOperador) {
-        Visita visita = visitaRepository.findById(dto.getVisitaId())
-                .orElseThrow(() -> new IllegalArgumentException("Visita no encontrada con ID: " + dto.getVisitaId()));
-
-        PuntoAcceso punto = null;
-        if (dto.getPuntoAccesoId() != null) {
-            punto = puntoAccesoRepository.findById(dto.getPuntoAccesoId()).orElse(null);
-        }
-
-        Incidente incidente = Incidente.builder()
-                .visita(visita)
-                .reportadoPor(usuarioOperador)
-                .puntoAcceso(punto)
-                .fecha(LocalDateTime.now())
-                .severidad(dto.getSeveridad() != null ? dto.getSeveridad() : "Media")
-                .estado("Abierto")
-                .descripcion(dto.getDescripcion())
-                .accionesTomadas(dto.getAccionesTomadas())
-                .build();
-
-        incidente = incidenteRepository.save(incidente);
-
-        // Notificar alerta por WebSocket a supervisores y portería
-        accesoSubject.notificarObservadores(AccesoEvento.builder()
-                .tipo("ALERTA_SEGURIDAD")
-                .visitaId(visita.getId())
-                .visita(visita)
-                .persona(visita.getPersona())
-                .mensaje(String.format("Incidente reportado [%s]: %s (Severidad: %s)",
-                        incidente.getId(), incidente.getDescripcion(), incidente.getSeveridad()))
-                .build());
-
-        return mapToDto(incidente);
+        return operations.executeAs(usuarioOperador, "INCIDENTES_REGISTRAR", "REGISTRAR_INCIDENTE", "incidentes",
+                dto == null ? null : dto.getId(), () -> {
+            if (dto == null || dto.getVisitaId() == null || dto.getDescripcion() == null
+                    || dto.getDescripcion().isBlank()) {
+                throw new IllegalArgumentException("Visita y descripción del incidente son obligatorias.");
+            }
+            Visita visit = visitaRepository.findById(dto.getVisitaId())
+                    .orElseThrow(() -> new IllegalArgumentException("Visita no encontrada."));
+            PuntoAcceso point = dto.getPuntoAccesoId() == null ? null
+                    : puntoAccesoRepository.findById(dto.getPuntoAccesoId())
+                    .orElseThrow(() -> new IllegalArgumentException("Punto de acceso no encontrado."));
+            Incidente incident = incidenteRepository.save(Incidente.builder().visita(visit)
+                    .reportadoPor(usuarioOperador).puntoAcceso(point).fecha(LocalDateTime.now())
+                    .severidad(dto.getSeveridad() == null ? "Media" : dto.getSeveridad())
+                    .estado("Abierto").descripcion(dto.getDescripcion()).accionesTomadas(dto.getAccionesTomadas())
+                    .build());
+            accesoSubject.notificarObservadores(AccesoEvento.builder().tipo("ALERTA_SEGURIDAD")
+                    .visitaId(visit.getId()).visita(visit).persona(visit.getPersona())
+                    .mensaje("Incidente " + incident.getId() + ": " + incident.getDescripcion()).build());
+            return mapToDto(incident);
+        });
     }
 
-    @Transactional
-    @RequirePermiso("INCIDENTES_GESTIONAR")
-    @Auditable(accion = "ACTUALIZAR_INCIDENTE", tabla = "incidentes")
-    public IncidenteDto actualizarEstado(Integer incidenteId, String nuevoEstado, String accionesTomadas, Usuario usuarioOperador) {
-        Incidente incidente = incidenteRepository.findById(incidenteId)
-                .orElseThrow(() -> new IllegalArgumentException("Incidente no encontrado con ID: " + incidenteId));
-
-        incidente.setEstado(nuevoEstado);
-        if (accionesTomadas != null && !accionesTomadas.isBlank()) {
-            incidente.setAccionesTomadas(accionesTomadas);
-        }
-        incidente = incidenteRepository.save(incidente);
-
-        return mapToDto(incidente);
+    public IncidenteDto actualizarEstado(Integer incidenteId, String nuevoEstado,
+                                         String accionesTomadas, Usuario usuarioOperador) {
+        return operations.executeAs(usuarioOperador, "INCIDENTES_GESTIONAR", "ACTUALIZAR_INCIDENTE", "incidentes",
+                incidenteId, () -> {
+                    Incidente incident = incidenteRepository.findById(incidenteId)
+                            .orElseThrow(() -> new IllegalArgumentException("Incidente no encontrado."));
+                    incident.setEstado(nuevoEstado);
+                    if (accionesTomadas != null && !accionesTomadas.isBlank()) {
+                        incident.setAccionesTomadas(accionesTomadas);
+                    }
+                    return mapToDto(incidenteRepository.save(incident));
+                });
     }
 
-    private IncidenteDto mapToDto(Incidente i) {
-        return IncidenteDto.builder()
-                .id(i.getId())
-                .visitaId(i.getVisita().getId())
-                .puntoAccesoId(i.getPuntoAcceso() != null ? i.getPuntoAcceso().getId() : null)
-                .severidad(i.getSeveridad())
-                .estado(i.getEstado())
-                .descripcion(i.getDescripcion())
-                .accionesTomadas(i.getAccionesTomadas())
-                .reportadoPorNombre(i.getReportadoPor() != null ? i.getReportadoPor().getNombre() : "N/A")
-                .fecha(i.getFecha() != null ? i.getFecha().format(FORMATTER) : "N/A")
-                .build();
+    public void eliminarIncidente(Integer incidenteId, Usuario usuarioOperador) {
+        operations.executeAs(usuarioOperador, "INCIDENTES_GESTIONAR", "ELIMINAR_INCIDENTE", "incidentes", incidenteId,
+                () -> incidenteRepository.deleteById(incidenteId));
+    }
+
+    private IncidenteDto mapToDto(Incidente incident) {
+        Visita visit = incident.getVisita();
+        return IncidenteDto.builder().id(incident.getId()).visitaId(visit == null ? null : visit.getId())
+                .puntoAccesoId(incident.getPuntoAcceso() == null ? null : incident.getPuntoAcceso().getId())
+                .severidad(incident.getSeveridad()).estado(incident.getEstado())
+                .descripcion(incident.getDescripcion()).accionesTomadas(incident.getAccionesTomadas())
+                .reportadoPorNombre(incident.getReportadoPor() == null ? "N/A" : incident.getReportadoPor().getNombre())
+                .fecha(incident.getFecha() == null ? "N/A" : incident.getFecha().format(FORMATTER)).build();
     }
 }

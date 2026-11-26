@@ -1,29 +1,37 @@
 package com.acme.sica.pattern.observer;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import com.acme.sica.config.DatabaseConnectionManager;
+
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-/**
- * PATRÓN OBSERVER (Subject):
- * Mantiene la lista de observadores registrados y publica eventos en tiempo real.
- */
-@Component
-@Slf4j
-public class AccesoSubject {
+public final class AccesoSubject implements AutoCloseable {
+    private static final Logger LOGGER = Logger.getLogger(AccesoSubject.class.getName());
+    private static final ThreadFactory DAEMON_THREADS = task -> {
+        Thread thread = new Thread(task, "sica-access-observer");
+        thread.setDaemon(true);
+        return thread;
+    };
 
     private final List<AccesoObserver> observers = new CopyOnWriteArrayList<>();
+    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2, DAEMON_THREADS);
+    private final DatabaseConnectionManager database;
 
-    public AccesoSubject(List<AccesoObserver> initialObservers) {
-        if (initialObservers != null) {
-            observers.addAll(initialObservers);
-        }
+    public AccesoSubject() {
+        this(DatabaseConnectionManager.getInstance());
+    }
+
+    public AccesoSubject(DatabaseConnectionManager database) {
+        this.database = database;
     }
 
     public void registrarObservador(AccesoObserver observer) {
         observers.add(observer);
-        log.info("Observador registrado: {}", observer.getClass().getSimpleName());
     }
 
     public void removerObservador(AccesoObserver observer) {
@@ -31,12 +39,17 @@ public class AccesoSubject {
     }
 
     public void notificarObservadores(AccesoEvento evento) {
-        for (AccesoObserver observer : observers) {
+        database.afterCommit(() -> executor.execute(() -> observers.forEach(observer -> {
             try {
                 observer.onEventoAcceso(evento);
-            } catch (Exception e) {
-                log.error("Error notificando al observador {}: {}", observer.getClass().getSimpleName(), e.getMessage());
+            } catch (RuntimeException failure) {
+                LOGGER.log(Level.SEVERE, "Error al notificar observador " + observer.getClass().getName(), failure);
             }
-        }
+        })));
+    }
+
+    @Override
+    public void close() {
+        executor.shutdown();
     }
 }

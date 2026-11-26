@@ -5,7 +5,6 @@ import com.acme.sica.dto.TipoFlujoAcceso;
 import com.acme.sica.model.*;
 import com.acme.sica.repository.VisitaEstadoRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -15,7 +14,6 @@ import java.util.UUID;
  * Centraliza la creación e inicialización de entidades Visita según el tipo de flujo de acceso,
  * asignando estados, códigos de pase únicos (UUID), flags temporales y metadatos correspondientes.
  */
-@Component
 @RequiredArgsConstructor
 public class VisitaFactory {
 

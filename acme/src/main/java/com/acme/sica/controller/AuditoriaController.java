@@ -1,26 +1,18 @@
 package com.acme.sica.controller;
 
+import com.acme.sica.config.SicaApplicationContext;
 import com.acme.sica.model.BitacoraAuditoria;
-import com.acme.sica.security.RequirePermiso;
-import com.acme.sica.service.AuditoriaService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@RestController
-@RequestMapping("/api/auditoria")
-@RequiredArgsConstructor
-public class AuditoriaController {
+public final class AuditoriaController {
+    private final SicaApplicationContext context;
 
-    private final AuditoriaService auditoriaService;
+    public AuditoriaController(SicaApplicationContext context) {
+        this.context = context;
+    }
 
-    @GetMapping
-    @RequirePermiso("AUDITORIA_VER")
-    public ResponseEntity<List<BitacoraAuditoria>> listarAuditoria() {
-        return ResponseEntity.ok(auditoriaService.obtenerUltimosEventos());
+    public List<BitacoraAuditoria> listarUltimosEventos() {
+        return context.auditoriaService().obtenerUltimosEventos();
     }
 }
