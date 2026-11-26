@@ -10,6 +10,7 @@ public final class MainController {
 
     public List<Module> visibleModules() {
         List<Module> modules = new ArrayList<>();
+        modules.add(new Module("inicio", "Inicio", "⌂"));
         addIfAllowed(modules, "portería", "Portería", "◈", "ACCESO_CHECKIN", "ACCESO_CHECKOUT",
                 "ACCESO_SOLICITAR", "ACCESO_PASE_TEMPORAL", "ACCESO_REGULARIZAR");
         addIfAllowed(modules, "aprobaciones", "Aprobaciones", "✓", "ACCESO_APROBAR");

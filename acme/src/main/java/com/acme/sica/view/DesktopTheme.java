@@ -43,7 +43,11 @@ final class DesktopTheme {
         badge.setPreferredSize(new Dimension(width, height));
         try {
             BufferedImage image = ImageIO.read(DesktopTheme.class.getResource("/img/logo-acme.png"));
-            Image scaled = image.getScaledInstance(width - 28, height - 24, Image.SCALE_SMOOTH);
+            double scale = Math.min((double) (width - 28) / image.getWidth(),
+                    (double) (height - 24) / image.getHeight());
+            int imageWidth = (int) Math.round(image.getWidth() * scale);
+            int imageHeight = (int) Math.round(image.getHeight() * scale);
+            Image scaled = image.getScaledInstance(imageWidth, imageHeight, Image.SCALE_SMOOTH);
             badge.add(new JLabel(new ImageIcon(scaled)));
         } catch (IOException | IllegalArgumentException failure) {
             LOGGER.log(Level.WARNING, "Could not load the SICA logo resource.", failure);

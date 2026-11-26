@@ -20,6 +20,15 @@ public class NotificacionRepository extends JdbcRepositorySupport {
                 this::map, usuarioId);
     }
 
+    public List<Notificacion> findTop10ByDestinatarioUsuarioIdOrderByFechaCreacionDesc(Integer usuarioId) {
+        return query("""
+                SELECT * FROM notificaciones
+                WHERE destinatario_usuario_id = ?
+                ORDER BY fecha_creacion DESC
+                LIMIT 10
+                """, this::map, usuarioId);
+    }
+
     public List<Notificacion> findByDestinatarioUsuarioIdAndLeidaFalseOrderByFechaCreacionDesc(Integer usuarioId) {
         return query("""
                 SELECT * FROM notificaciones WHERE destinatario_usuario_id = ? AND leida = FALSE

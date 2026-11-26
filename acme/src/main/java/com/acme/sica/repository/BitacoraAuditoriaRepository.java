@@ -39,6 +39,10 @@ public class BitacoraAuditoriaRepository extends JdbcRepositorySupport {
         return query(SELECT + "ORDER BY a.fecha_hora DESC LIMIT 100", this::map);
     }
 
+    public List<BitacoraAuditoria> findTop10ByOrderByFechaHoraDesc() {
+        return query(SELECT + "ORDER BY a.fecha_hora DESC LIMIT 10", this::map);
+    }
+
     public List<BitacoraAuditoria> findByUsuarioIdOrderByFechaHoraDesc(Integer usuarioId) {
         return query(SELECT + "WHERE a.usuario_id = ? ORDER BY a.fecha_hora DESC",
                 this::map, usuarioId);

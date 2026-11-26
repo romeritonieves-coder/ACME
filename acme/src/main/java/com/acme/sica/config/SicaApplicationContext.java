@@ -22,6 +22,7 @@ public final class SicaApplicationContext implements AutoCloseable {
     private final NotificacionService notificacionService;
     private final AuditoriaService auditoriaService;
     private final UsuarioService usuarioService;
+    private final DashboardService dashboardService;
 
     public SicaApplicationContext() {
         database = DatabaseConnectionManager.getInstance();
@@ -66,6 +67,8 @@ public final class SicaApplicationContext implements AutoCloseable {
         incidenteService = new IncidenteService(incidentes, visitas, puntos, accesoSubject, operations);
         notificacionService = new NotificacionService(notificaciones, operations, sessions);
         usuarioService = new UsuarioService(usuarios, roles, empresas, operations);
+        dashboardService = new DashboardService(new DashboardRepository(), notificaciones, bitacora,
+                database, sessions);
     }
 
     public AuthService authService() {
@@ -102,6 +105,10 @@ public final class SicaApplicationContext implements AutoCloseable {
 
     public AccesoSubject accesoSubject() {
         return accesoSubject;
+    }
+
+    public DashboardService dashboardService() {
+        return dashboardService;
     }
 
     @Override
