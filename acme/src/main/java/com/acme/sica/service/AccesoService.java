@@ -185,9 +185,9 @@ public class AccesoService {
             return requests;
         }
         String company = usuario.getEmpresa() == null ? null : usuario.getEmpresa().getNombre();
-        return requests.stream().filter(row -> row.getAnfitrion() == null
-                || row.getAnfitrion().equalsIgnoreCase(usuario.getNombre())
-                || (company != null && company.equalsIgnoreCase(row.getEmpresaDestino())))
+        return requests.stream().filter(row ->
+                (row.getAnfitrion() != null && row.getAnfitrion().equalsIgnoreCase(usuario.getNombre()))
+                        || (company != null && company.equalsIgnoreCase(row.getEmpresaDestino())))
                 .collect(Collectors.toList());
     }
 
