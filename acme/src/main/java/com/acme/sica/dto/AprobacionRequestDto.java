@@ -1,7 +1,6 @@
 package com.acme.sica.dto;
 
 import lombok.*;
-import jakarta.validation.constraints.NotNull;
 
 @Getter
 @Setter
@@ -9,7 +8,6 @@ import jakarta.validation.constraints.NotNull;
 @AllArgsConstructor
 @Builder
 public class AprobacionRequestDto {
-    @NotNull(message = "El ID de la visita es obligatorio")
     private Integer visitaId;
 
     private boolean aprobado;

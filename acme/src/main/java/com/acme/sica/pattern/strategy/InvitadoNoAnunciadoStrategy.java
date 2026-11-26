@@ -11,15 +11,12 @@ import com.acme.sica.repository.EmpresaRepository;
 import com.acme.sica.repository.UsuarioRepository;
 import com.acme.sica.repository.VisitaRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * FLUJO 2: Invitado no anunciado
  * Registra la solicitud en estado 'Pendiente de Aprobacion' y notifica en tiempo real
- * al Funcionario de Empresa vía WebSocket. La pantalla del Guarda se actualiza de inmediato.
+ * al Funcionario de Empresa mediante el observer local de la aplicación de escritorio.
  */
-@Component
 @RequiredArgsConstructor
 public class InvitadoNoAnunciadoStrategy implements AccesoStrategy {
 
@@ -35,10 +32,10 @@ public class InvitadoNoAnunciadoStrategy implements AccesoStrategy {
     }
 
     @Override
-    @Transactional
     public AccesoResponseDto procesar(AccesoRequestDto request, Persona persona, Usuario usuarioActual, PuntoAcceso puntoAcceso) {
         // Validación de restricción
-        if (persona.getEstadoAcceso() != null && "Con Prohibicion de Ingreso".equalsIgnoreCase(persona.getEstadoAcceso().getNombreEstado())) {
+        if (persona.getEstadoAcceso() == null
+                || !"Activo".equalsIgnoreCase(persona.getEstadoAcceso().getNombreEstado())) {
             return AccesoResponseDto.builder()
                     .exito(false)
                     .mensaje("ACCESO DENEGADO: La persona tiene prohibición de ingreso: " + persona.getMotivoRestriccion())
@@ -51,7 +48,8 @@ public class InvitadoNoAnunciadoStrategy implements AccesoStrategy {
         // Determinar anfitrión
         Usuario anfitrion = null;
         if (request.getAnfitrionId() != null) {
-            anfitrion = usuarioRepository.findById(request.getAnfitrionId()).orElse(null);
+            anfitrion = usuarioRepository.findById(request.getAnfitrionId())
+                    .orElseThrow(() -> new IllegalArgumentException("Funcionario anfitrión no encontrado."));
         }
         if (anfitrion == null && request.getEmpresaDestinoId() != null) {
             // Asignar primer funcionario disponible de esa empresa
@@ -63,7 +61,13 @@ public class InvitadoNoAnunciadoStrategy implements AccesoStrategy {
 
         Empresa empresaDestino = null;
         if (request.getEmpresaDestinoId() != null) {
-            empresaDestino = empresaRepository.findById(request.getEmpresaDestinoId()).orElse(null);
+            empresaDestino = empresaRepository.findById(request.getEmpresaDestinoId())
+                    .orElseThrow(() -> new IllegalArgumentException("Empresa de destino no encontrada."));
+        }
+        if (anfitrion != null && (!"Funcionario de Empresa".equalsIgnoreCase(anfitrion.getRol().getNombreRol())
+                || (empresaDestino != null && (anfitrion.getEmpresa() == null
+                || !empresaDestino.getId().equals(anfitrion.getEmpresa().getId()))))) {
+            throw new SecurityException("El anfitrión no pertenece a la empresa de destino.");
         }
 
         Visita visita = visitaFactory.crearVisita(
@@ -79,7 +83,7 @@ public class InvitadoNoAnunciadoStrategy implements AccesoStrategy {
 
         visita = visitaRepository.save(visita);
 
-        // Notificar al Funcionario de Empresa vía WebSocket en tiempo real (Observer)
+        // Publish the event to the local observer bus for real-time desktop updates.
         String mensaje = String.format("Solicitud de ingreso no anunciada: %s (Doc: %s) desea ingresar para: %s",
                 persona.getNombre(), persona.getDocumentoIdentidad(),
                 request.getMotivoVisita() != null ? request.getMotivoVisita() : "Reunión");

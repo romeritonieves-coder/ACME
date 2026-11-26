@@ -10,8 +10,6 @@ import com.acme.sica.pattern.observer.AccesoSubject;
 import com.acme.sica.repository.VisitaEstadoRepository;
 import com.acme.sica.repository.VisitaRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,7 +18,6 @@ import java.util.List;
  * FLUJO 1: Invitado pre-registrado
  * Check-in inmediato validando que la visita esté pre-aprobada, mostrando foto y anfitrión.
  */
-@Component
 @RequiredArgsConstructor
 public class InvitadoPreRegistradoStrategy implements AccesoStrategy {
 
@@ -35,10 +32,10 @@ public class InvitadoPreRegistradoStrategy implements AccesoStrategy {
     }
 
     @Override
-    @Transactional
     public AccesoResponseDto procesar(AccesoRequestDto request, Persona persona, Usuario usuarioActual, PuntoAcceso puntoAcceso) {
         // Validar prohibición de ingreso
-        if (persona.getEstadoAcceso() != null && "Con Prohibicion de Ingreso".equalsIgnoreCase(persona.getEstadoAcceso().getNombreEstado())) {
+        if (persona.getEstadoAcceso() == null
+                || !"Activo".equalsIgnoreCase(persona.getEstadoAcceso().getNombreEstado())) {
             return AccesoResponseDto.builder()
                     .exito(false)
                     .mensaje("ACCESO DENEGADO: La persona tiene restricción de seguridad: " + persona.getMotivoRestriccion())
@@ -82,7 +79,7 @@ public class InvitadoPreRegistradoStrategy implements AccesoStrategy {
         String anfitrionNombre = visita.getAnfitrion() != null ? visita.getAnfitrion().getNombre() : "No especificado";
         String empresaNombre = visita.getEmpresaDestino() != null ? visita.getEmpresaDestino().getNombre() : (persona.getEmpresa() != null ? persona.getEmpresa().getNombre() : "Complejo Acme");
 
-        // Notificar por Observer (WebSocket a portería y censo de evacuación)
+        // Publish an access event for desktop views and the evacuation census.
         accesoSubject.notificarObservadores(AccesoEvento.builder()
                 .tipo("CHECK_IN")
                 .visitaId(visita.getId())

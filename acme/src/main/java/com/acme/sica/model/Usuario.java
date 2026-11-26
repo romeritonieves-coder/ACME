@@ -1,6 +1,5 @@
 package com.acme.sica.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import java.time.LocalDateTime;
 
@@ -17,7 +16,6 @@ public class Usuario {
 
     private String email;
 
-    @JsonIgnore
     private String password;
 
     private Rol rol;

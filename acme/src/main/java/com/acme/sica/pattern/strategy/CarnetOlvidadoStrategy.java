@@ -10,15 +10,12 @@ import com.acme.sica.pattern.observer.AccesoSubject;
 import com.acme.sica.repository.UsuarioRepository;
 import com.acme.sica.repository.VisitaRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * FLUJO 3: Trabajador con carnet olvidado
  * Genera un pase temporal (es_pase_temporal = TRUE) en estado 'Pendiente de Aprobacion por Olvido'
  * y despacha notificación inmediata al funcionario/supervisor para validación y autorización.
  */
-@Component
 @RequiredArgsConstructor
 public class CarnetOlvidadoStrategy implements AccesoStrategy {
 
@@ -33,10 +30,10 @@ public class CarnetOlvidadoStrategy implements AccesoStrategy {
     }
 
     @Override
-    @Transactional
     public AccesoResponseDto procesar(AccesoRequestDto request, Persona persona, Usuario usuarioActual, PuntoAcceso puntoAcceso) {
         // Validar prohibición de ingreso
-        if (persona.getEstadoAcceso() != null && "Con Prohibicion de Ingreso".equalsIgnoreCase(persona.getEstadoAcceso().getNombreEstado())) {
+        if (persona.getEstadoAcceso() == null
+                || !"Activo".equalsIgnoreCase(persona.getEstadoAcceso().getNombreEstado())) {
             return AccesoResponseDto.builder()
                     .exito(false)
                     .mensaje("ACCESO DENEGADO: El trabajador tiene prohibición de ingreso: " + persona.getMotivoRestriccion())
@@ -72,7 +69,7 @@ public class CarnetOlvidadoStrategy implements AccesoStrategy {
 
         visita = visitaRepository.save(visita);
 
-        // Notificar emisión de pase temporal vía WebSocket (Observer)
+        // Notify the local desktop observers about the temporary pass.
         String mensaje = String.format("Pase Temporal Requerido: El trabajador %s (Doc: %s) olvidó su carnet. Requiere aprobación inmediata.",
                 persona.getNombre(), persona.getDocumentoIdentidad());
 

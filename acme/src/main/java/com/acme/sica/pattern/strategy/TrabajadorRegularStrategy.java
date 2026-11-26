@@ -9,13 +9,10 @@ import com.acme.sica.pattern.observer.AccesoEvento;
 import com.acme.sica.pattern.observer.AccesoSubject;
 import com.acme.sica.repository.VisitaRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Flujo de Trabajador Regular (ingreso directo habitual con carnet activo)
  */
-@Component
 @RequiredArgsConstructor
 public class TrabajadorRegularStrategy implements AccesoStrategy {
 
@@ -29,9 +26,9 @@ public class TrabajadorRegularStrategy implements AccesoStrategy {
     }
 
     @Override
-    @Transactional
     public AccesoResponseDto procesar(AccesoRequestDto request, Persona persona, Usuario usuarioActual, PuntoAcceso puntoAcceso) {
-        if (persona.getEstadoAcceso() != null && "Con Prohibicion de Ingreso".equalsIgnoreCase(persona.getEstadoAcceso().getNombreEstado())) {
+        if (persona.getEstadoAcceso() == null
+                || !"Activo".equalsIgnoreCase(persona.getEstadoAcceso().getNombreEstado())) {
             return AccesoResponseDto.builder()
                     .exito(false)
                     .mensaje("ACCESO DENEGADO: El trabajador tiene prohibición de ingreso: " + persona.getMotivoRestriccion())

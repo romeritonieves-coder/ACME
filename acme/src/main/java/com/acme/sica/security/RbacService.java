@@ -1,45 +1,48 @@
 package com.acme.sica.security;
 
+import com.acme.sica.model.Permiso;
 import com.acme.sica.model.Usuario;
 import com.acme.sica.repository.PermisoRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Validador granular de permisos RBAC consultando activamente la base de datos.
- */
-@Service
-@RequiredArgsConstructor
-@Slf4j
+import java.util.Set;
+import java.util.stream.Collectors;
+
 public class RbacService {
-
     private final PermisoRepository permisoRepository;
+    private final SessionManager sessionManager;
 
-    @Transactional(readOnly = true)
+    public RbacService() {
+        this(new PermisoRepository(), SessionManager.getInstance());
+    }
+
+    public RbacService(PermisoRepository permisoRepository, SessionManager sessionManager) {
+        this.permisoRepository = permisoRepository;
+        this.sessionManager = sessionManager;
+    }
+
+    public Set<String> permisosParaRol(Integer rolId) {
+        return permisoRepository.findPermisosByRolId(rolId).stream()
+                .map(Permiso::getNombrePermiso)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
     public boolean tienePermiso(Usuario usuario, String nombrePermiso) {
         if (usuario == null || usuario.getRol() == null) {
-            log.warn("RBAC Denegado: Usuario o rol nulo");
             return false;
         }
-
-        // Superusuario tiene permiso absoluto
         if ("Superusuario".equalsIgnoreCase(usuario.getRol().getNombreRol())) {
             return true;
         }
-
-        // Verificación granular directa contra la tabla rol_permisos en MySQL
-        boolean autorizado = permisoRepository.rolTienePermiso(usuario.getRol().getId(), nombrePermiso);
-        if (!autorizado) {
-            log.warn("RBAC Denegado: Rol '{}' no posee permiso '{}'", usuario.getRol().getNombreRol(), nombrePermiso);
-        }
-        return autorizado;
+        return permisoRepository.rolTienePermiso(usuario.getRol().getId(), nombrePermiso);
     }
 
     public void validarPermiso(Usuario usuario, String nombrePermiso) {
-        if (!tienePermiso(usuario, nombrePermiso)) {
-            throw new SecurityException("Acceso Denegado por RBAC: Se requiere el permiso granular '" + nombrePermiso + "' en BD.");
+        if (usuario == null || !tienePermiso(usuario, nombrePermiso)) {
+            throw new SecurityException("Acceso denegado: se requiere el permiso " + nombrePermiso + ".");
         }
+    }
+
+    public void validarSesion(String nombrePermiso) {
+        sessionManager.requirePermission(nombrePermiso);
     }
 }

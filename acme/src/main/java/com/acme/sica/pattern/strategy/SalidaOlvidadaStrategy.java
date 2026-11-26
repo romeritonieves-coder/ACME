@@ -10,12 +10,10 @@ import com.acme.sica.pattern.observer.AccesoSubject;
 import com.acme.sica.repository.VisitaEstadoRepository;
 import com.acme.sica.repository.VisitaRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * FLUJO 4: Regularización de salida olvidada
@@ -23,10 +21,9 @@ import java.util.List;
  * Cierra automáticamente la visita anterior como 'Cerrada por Sistema (Salida Olvidada)'
  * y abre de inmediato la nueva visita en estado 'Dentro'.
  */
-@Component
 @RequiredArgsConstructor
-@Slf4j
 public class SalidaOlvidadaStrategy implements AccesoStrategy {
+    private static final Logger LOGGER = Logger.getLogger(SalidaOlvidadaStrategy.class.getName());
 
     private final VisitaRepository visitaRepository;
     private final VisitaEstadoRepository visitaEstadoRepository;
@@ -39,10 +36,10 @@ public class SalidaOlvidadaStrategy implements AccesoStrategy {
     }
 
     @Override
-    @Transactional
     public AccesoResponseDto procesar(AccesoRequestDto request, Persona persona, Usuario usuarioActual, PuntoAcceso puntoAcceso) {
         // Validar prohibición de ingreso
-        if (persona.getEstadoAcceso() != null && "Con Prohibicion de Ingreso".equalsIgnoreCase(persona.getEstadoAcceso().getNombreEstado())) {
+        if (persona.getEstadoAcceso() == null
+                || !"Activo".equalsIgnoreCase(persona.getEstadoAcceso().getNombreEstado())) {
             return AccesoResponseDto.builder()
                     .exito(false)
                     .mensaje("ACCESO DENEGADO: La persona tiene prohibición de ingreso: " + persona.getMotivoRestriccion())
@@ -64,7 +61,7 @@ public class SalidaOlvidadaStrategy implements AccesoStrategy {
             anterior.setObservaciones((anterior.getObservaciones() != null ? anterior.getObservaciones() + " | " : "") +
                     "Cerrada automáticamente por regularización del sistema al registrar nuevo acceso");
             visitaRepository.save(anterior);
-            log.info("Visita previa {} cerrada automáticamente por salida olvidada", anterior.getId());
+            LOGGER.info(() -> "Previous visit closed after missed checkout: " + anterior.getId());
         }
 
         // 2. Crear y abrir la nueva visita directamente en estado 'Dentro'
