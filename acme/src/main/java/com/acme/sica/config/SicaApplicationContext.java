@@ -100,6 +100,10 @@ public final class SicaApplicationContext implements AutoCloseable {
         return usuarioService;
     }
 
+    public AccesoSubject accesoSubject() {
+        return accesoSubject;
+    }
+
     @Override
     public void close() {
         accesoSubject.close();

@@ -29,19 +29,15 @@ public class PersonaService {
     }
 
     public Optional<PersonaDto> buscarPorDocumento(String documento) {
-        return operations.execute(null, "BUSCAR_PERSONA_POR_DOCUMENTO", "personas", null, () -> {
-            ensureCanSearchPeople();
-            return personaRepository.findByDocumentoIdentidad(documento).map(this::mapToDto);
-        });
+        ensureCanSearchPeople();
+        return personaRepository.findByDocumentoIdentidad(documento).map(this::mapToDto);
     }
 
     public List<PersonaDto> buscarPersonas(String query) {
-        return operations.execute(null, "BUSCAR_PERSONAS", "personas", null, () -> {
-            ensureCanSearchPeople();
-            List<Persona> people = query == null || query.isBlank()
-                    ? personaRepository.findAll() : personaRepository.buscarPorNombreODocumento(query);
-            return people.stream().map(this::mapToDto).toList();
-        });
+        ensureCanSearchPeople();
+        List<Persona> people = query == null || query.isBlank()
+                ? personaRepository.findAll() : personaRepository.buscarPorNombreODocumento(query);
+        return people.stream().map(this::mapToDto).toList();
     }
 
     public PersonaDto cambiarEstadoAcceso(Integer personaId, String nuevoEstado,

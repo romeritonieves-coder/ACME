@@ -1,21 +1,24 @@
-# SICA Desktop Core
+# SICA Desktop
 
-The Java 17 core uses JDBC through HikariCP and connects to the existing MySQL
-database `sica_db` on `localhost:3307`. It does not initialize, migrate, or
-recreate the schema.
+Aplicación de escritorio Java 17 construida con Swing y FlatLaf. Se conecta
+mediante JDBC/HikariCP a la base MySQL existente `sica_db` en
+`localhost:3307`; no crea ni modifica el esquema.
 
-Configure the connection password outside the repository:
+Configure la contraseña fuera del repositorio y ejecute la aplicación desde
+la raíz del workspace:
 
 ```bash
 export SICA_DB_PASSWORD='your-database-password'
+mvn -f acme/pom.xml -Dsica.db.password="$SICA_DB_PASSWORD" exec:java
+```
+
+La URL y el usuario predeterminados son los de SICA Docker. Se pueden cambiar
+con `SICA_DB_URL` y `SICA_DB_USERNAME`, o con las propiedades
+`sica.db.url` y `sica.db.username`. Para verificar compilación y pruebas:
+
+```bash
 mvn -f acme/pom.xml clean test
 ```
 
-The URL and username default to the SICA Docker values. They can be overridden
-with `SICA_DB_URL` and `SICA_DB_USERNAME`, or with the corresponding
-`sica.db.url` and `sica.db.username` Java system properties. The password also
-supports `-Dsica.db.password=...`.
-
-Do not run `database/schema.sql` against an existing installation: it starts
-with `DROP DATABASE IF EXISTS sica_db`. The Swing interface and removal of the
-legacy static web assets are part of Phase 3.
+No ejecute `database/schema.sql` sobre una instalación existente: comienza
+con `DROP DATABASE IF EXISTS sica_db`.

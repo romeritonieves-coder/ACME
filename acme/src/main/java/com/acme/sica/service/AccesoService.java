@@ -83,24 +83,21 @@ public class AccesoService {
         return operations.executeAs(usuarioOperador, "ACCESO_CHECKOUT", "CHECK_OUT", "visitas", visitaId, () -> {
             Visita visita = visitaRepository.findById(visitaId)
                     .orElseThrow(() -> new IllegalArgumentException("Visita no encontrada con ID: " + visitaId));
-            VisitaEstado fuera = visitaEstadoRepository.findByNombreEstado("Fuera")
-                    .orElseThrow(() -> new IllegalStateException("Estado 'Fuera' no configurado en la base de datos."));
-            PuntoAcceso point = puntoAccesoSalidaId == null ? null
-                    : puntoAccesoRepository.findById(puntoAccesoSalidaId)
-                    .orElseThrow(() -> new IllegalArgumentException("Punto de acceso no encontrado."));
-            visita.setEstadoVisita(fuera);
-            visita.setFechaSalida(java.time.LocalDateTime.now());
-            visita.setPuntoAccesoSalida(point);
-            visitaRepository.save(visita);
-            Persona person = visita.getPersona();
-            accesoSubject.notificarObservadores(AccesoEvento.builder().tipo("CHECK_OUT").visitaId(visita.getId())
-                    .visita(visita).persona(person).mensaje("Salida registrada para " + person.getNombre())
-                    .estadoVisita("Fuera").build());
-            return AccesoResponseDto.builder().exito(true).mensaje("Salida registrada.")
-                    .visitaId(visita.getId()).estadoVisita("Fuera").personaNombre(person.getNombre())
-                    .documentoIdentidad(person.getDocumentoIdentidad()).tipoPersona(person.getTipoPersona())
-                    .urlFoto(person.getUrlFoto()).build();
+            return registrarSalidaInterna(visita, puntoAccesoSalidaId);
         });
+    }
+
+    public AccesoResponseDto registrarSalidaPorDocumento(String documento, Integer puntoAccesoSalidaId,
+                                                          Usuario usuarioOperador) {
+        return operations.executeAs(usuarioOperador, "ACCESO_CHECKOUT", "CHECK_OUT_POR_DOCUMENTO", "visitas",
+                null, () -> {
+                    Persona person = personaRepository.findByDocumentoIdentidad(documento)
+                            .orElseThrow(() -> new IllegalArgumentException("No se encontró la persona."));
+                    Visita visit = visitaRepository.findVisitasActivasDentroPorPersona(person.getId()).stream()
+                            .findFirst().orElseThrow(() ->
+                                    new IllegalStateException("La persona no tiene un ingreso activo."));
+                    return registrarSalidaInterna(visit, puntoAccesoSalidaId);
+                });
     }
 
     public AccesoResponseDto resolverSolicitud(AprobacionRequestDto request, Usuario funcionario) {
@@ -157,8 +154,8 @@ public class AccesoService {
     }
 
     public List<EvacuacionPersonaDto> obtenerReporteEvacuacion() {
-        return operations.execute("EVACUACION_VER", "CONSULTAR_EVACUACION", "vw_personas_actualmente_dentro",
-                null, () -> personasDentroRepository.findAll().stream()
+        SessionManager.getInstance().requirePermission("EVACUACION_VER");
+        return personasDentroRepository.findAll().stream()
                         .map(row -> EvacuacionPersonaDto.builder().visitaId(row.getVisitaId())
                                 .documentoIdentidad(row.getDocumentoIdentidad()).personaNombre(row.getPersonaNombre())
                                 .tipoPersona(row.getTipoPersona())
@@ -167,35 +164,51 @@ public class AccesoService {
                                 .fechaEntrada(row.getFechaEntrada() == null ? "N/A"
                                         : row.getFechaEntrada().format(FORMATTER))
                                 .vehiculoPlaca(row.getVehiculoPlaca()).build())
-                        .collect(Collectors.toList()));
+                        .collect(Collectors.toList());
     }
 
     public Map<String, Long> obtenerMetricasEvacuacion() {
-        return operations.execute("EVACUACION_VER", "CONSULTAR_METRICAS_EVACUACION",
-                "vw_personas_actualmente_dentro", null, () -> {
-                    List<VwPersonasActualmenteDentro> rows = personasDentroRepository.findAll();
-                    return Map.of("totalDentro", (long) rows.size(),
-                            "trabajadoresDentro", rows.stream()
-                                    .filter(person -> "Trabajador".equalsIgnoreCase(person.getTipoPersona())).count(),
-                            "invitadosDentro", rows.stream()
-                                    .filter(person -> "Invitado".equalsIgnoreCase(person.getTipoPersona())).count());
-                });
+        SessionManager.getInstance().requirePermission("EVACUACION_VER");
+        List<VwPersonasActualmenteDentro> rows = personasDentroRepository.findAll();
+        return Map.of("totalDentro", (long) rows.size(),
+                "trabajadoresDentro", rows.stream()
+                        .filter(person -> "Trabajador".equalsIgnoreCase(person.getTipoPersona())).count(),
+                "invitadosDentro", rows.stream()
+                        .filter(person -> "Invitado".equalsIgnoreCase(person.getTipoPersona())).count());
     }
 
     public List<VwSolicitudesPendientes> obtenerSolicitudesPendientes(Usuario usuario) {
-        return operations.execute("ACCESO_APROBAR", "CONSULTAR_SOLICITUDES", "vw_solicitudes_pendientes",
-                null, () -> {
-                    List<VwSolicitudesPendientes> requests = solicitudesPendientesRepository.findAll();
-                    if (usuario == null || usuario.getRol() == null
-                            || !"Funcionario de Empresa".equalsIgnoreCase(usuario.getRol().getNombreRol())) {
-                        return requests;
-                    }
-                    String company = usuario.getEmpresa() == null ? null : usuario.getEmpresa().getNombre();
-                    return requests.stream().filter(row -> row.getAnfitrion() == null
-                            || row.getAnfitrion().equalsIgnoreCase(usuario.getNombre())
-                            || (company != null && company.equalsIgnoreCase(row.getEmpresaDestino())))
-                            .collect(Collectors.toList());
-                });
+        SessionManager.getInstance().requirePermission("ACCESO_APROBAR");
+        List<VwSolicitudesPendientes> requests = solicitudesPendientesRepository.findAll();
+        if (usuario == null || usuario.getRol() == null
+                || !"Funcionario de Empresa".equalsIgnoreCase(usuario.getRol().getNombreRol())) {
+            return requests;
+        }
+        String company = usuario.getEmpresa() == null ? null : usuario.getEmpresa().getNombre();
+        return requests.stream().filter(row -> row.getAnfitrion() == null
+                || row.getAnfitrion().equalsIgnoreCase(usuario.getNombre())
+                || (company != null && company.equalsIgnoreCase(row.getEmpresaDestino())))
+                .collect(Collectors.toList());
+    }
+
+    private AccesoResponseDto registrarSalidaInterna(Visita visita, Integer puntoAccesoSalidaId) {
+        VisitaEstado fuera = visitaEstadoRepository.findByNombreEstado("Fuera")
+                .orElseThrow(() -> new IllegalStateException("Estado 'Fuera' no configurado en la base de datos."));
+        PuntoAcceso point = puntoAccesoSalidaId == null ? null
+                : puntoAccesoRepository.findById(puntoAccesoSalidaId)
+                .orElseThrow(() -> new IllegalArgumentException("Punto de acceso no encontrado."));
+        visita.setEstadoVisita(fuera);
+        visita.setFechaSalida(java.time.LocalDateTime.now());
+        visita.setPuntoAccesoSalida(point);
+        visitaRepository.save(visita);
+        Persona person = visita.getPersona();
+        accesoSubject.notificarObservadores(AccesoEvento.builder().tipo("CHECK_OUT").visitaId(visita.getId())
+                .visita(visita).persona(person).mensaje("Salida registrada para " + person.getNombre())
+                .estadoVisita("Fuera").build());
+        return AccesoResponseDto.builder().exito(true).mensaje("Salida registrada.")
+                .visitaId(visita.getId()).estadoVisita("Fuera").personaNombre(person.getNombre())
+                .documentoIdentidad(person.getDocumentoIdentidad()).tipoPersona(person.getTipoPersona())
+                .urlFoto(person.getUrlFoto()).build();
     }
 
 }
